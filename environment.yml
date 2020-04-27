@@ -1,0 +1,15 @@
+name: null
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - gym-box2d=0.17
+  - gym-classic_control=0.17
+  - jupyterlab=2.1
+  - pip=20.0
+  - pip:
+    - -e git+https://github.com/udacity/deep-reinforcement-learning.git#egg=unityagents&subdirectory=python
+  - python=3.6
+
