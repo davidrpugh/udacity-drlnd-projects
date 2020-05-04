@@ -1,0 +1,4 @@
+jupyterlab-nvdashboard==0.2.*
+jupyterlab-slurm==1.0.*
+jupyter-tensorboard==0.2.*
+
