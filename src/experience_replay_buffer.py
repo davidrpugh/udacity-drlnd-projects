@@ -4,6 +4,23 @@ import typing
 import numpy as np
 
 
+BetaAnnealingSchedule = typing.Optional[typing.Callable[[int, float], float]]
+RandomState = typing.Optional[np.random.RandomState]
+
+
+def sampling_probabilities(priorities: np.ndarray, alpha: float):
+    """Sampling probability is increasing function of priority"""
+    return priorities**alpha / np.sum(priorities**alpha)
+    
+
+def sampling_weights(probabilities: np.ndarray, beta: float, normalize: bool):
+    n = probabilities.size
+    weights = (n * probabilities)**-beta
+    if normalize:
+        weights = weights / weights.max()
+    return weights
+
+
 _field_names = [
     "state",
     "action",
@@ -18,46 +35,55 @@ class PrioritizedExperienceReplayBuffer:
     """Fixed-size buffer to store priority, Experience tuples."""
 
     def __init__(self,
-                 batch_size: int,
-                 buffer_size: int,
+                 maximum_size: int,
                  alpha: float = 0.0,
-                 random_state: np.random.RandomState = None) -> None:
+                 beta_annealing_schedule: BetaAnnealingSchedule = None,
+                 initial_beta: float = 0.0,
+                 random_state: RandomState = None) -> None:
         """
-        Initialize an ExperienceReplayBuffer object.
+        Initialize a PrioritizedExperienceReplayBuffer object.
 
         Parameters:
         -----------
-        buffer_size (int): maximum size of buffer
-        batch_size (int): size of each training batch
+        maximum_size (int): maximum size of buffer
         alpha (float): Strength of prioritized sampling. Default to 0.0 (i.e., uniform sampling).
+        beta_annealing_schedule (BetaAnnealingSchedule): function that takes an episode number and 
+            an initial value for beta and returns the current value of beta.
         random_state (np.random.RandomState): random number generator.
         
         """
-        self._batch_size = batch_size
-        self._buffer_size = buffer_size
-        self._buffer_length = 0 # current number of prioritized experience tuples in buffer
-        self._buffer = np.empty(self._buffer_size, dtype=[("priority", np.float32), ("experience", Experience)])
+        self._maximum_size = maximum_size
+        self._current_size = 0 # current number of prioritized experience tuples in buffer
+        _dtype = [("priority", np.float32), ("experience", Experience)]
+        self._buffer = np.empty(self._maximum_size, _dtype)
         self._alpha = alpha
+        self._initial_beta = initial_beta
+        
+        if beta_annealing_schedule is None:
+            self._beta_annealing_schedule = lambda n: self._initial_beta
+        else:
+            self._beta_annealing_schedule = lambda n: beta_annealing_schedule(n, self._initial_beta)
+
         self._random_state = np.random.RandomState() if random_state is None else random_state
         
     def __len__(self) -> int:
         """Current number of prioritized experience tuple stored in buffer."""
-        return self._buffer_length
+        return self._current_size
 
     @property
     def alpha(self):
         """Strength of prioritized sampling."""
         return self._alpha
-
-    @property
-    def batch_size(self) -> int:
-        """Number of experience samples per training batch."""
-        return self._batch_size
     
     @property
-    def buffer_size(self) -> int:
+    def maximum_size(self) -> int:
         """Maximum number of prioritized experience tuples stored in buffer."""
-        return self._buffer_size
+        return self._maximum_size
+    
+    @property
+    def alpha(self):
+        """Initial strength for sampling correction."""
+        return self._initial_beta
 
     def add(self, experience: Experience) -> None:
         """Add a new experience to memory."""
@@ -69,34 +95,40 @@ class PrioritizedExperienceReplayBuffer:
             else:
                 pass # low priority experiences should not be included in buffer
         else:
-            self._buffer[self._buffer_length] = (priority, experience)
-            self._buffer_length += 1
+            self._buffer[self._current_size] = (priority, experience)
+            self._current_size += 1
 
     def is_empty(self) -> bool:
         """True if the buffer is empty; False otherwise."""
-        return self._buffer_length == 0
+        return self._current_size == 0
     
     def is_full(self) -> bool:
         """True if the buffer is full; False otherwise."""
-        return self._buffer_length == self._buffer_size
+        return self._current_size == self._maximum_size
     
-    def sample(self, beta: float) -> typing.Tuple[np.array, np.array, np.array]:
+    def sample(self, batch_size: int, episode_number: int) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Sample a batch of experiences from memory."""
         # use sampling scheme to determine which experiences to use for learning
-        ps = self._buffer[:self._buffer_length]["priority"]
-        sampling_probs = ps**self._alpha / np.sum(ps**self._alpha)
-        idxs = self._random_state.choice(np.arange(ps.size),
-                                         size=self._batch_size,
-                                         replace=True,
-                                         p=sampling_probs)
+        ps = self._buffer[:self._current_size]["priority"]
+        sampling_probs = sampling_probabilities(ps, self._alpha)
         
-        # select the experiences and compute sampling weights
-        experiences = self._buffer["experience"][idxs]        
-        weights = (self._buffer_length * sampling_probs[idxs])**-beta
-        normalized_weights = weights / weights.max()
+        # use sampling probabilities to compute sampling weights
+        beta = self._beta_annealing_schedule(episode_number)
+        weights = sampling_weights(sampling_probs, beta, normalize=True)
         
-        return idxs, experiences, normalized_weights
+        # randomly sample indicies corresponding to priority, experience tuples
+        idxs = np.arange(sampling_probs.size)
+        random_idxs = self._random_state.choice(idxs,
+                                                size=batch_size,
+                                                replace=True,
+                                                p=sampling_probs)
+        
+        # select the experiences and sampling weights
+        sampled_experiences = self._buffer["experience"][random_idxs]
+        sampled_weights = weights[random_idxs]
+        
+        return random_idxs, sampled_experiences, sampled_weights
 
-    def update_priorities(self, idxs: np.array, priorities: np.array) -> None:
+    def update_priorities(self, idxs: np.ndarray, priorities: np.ndarray) -> None:
         """Update the priorities associated with particular experiences."""
         self._buffer["priority"][idxs] = priorities

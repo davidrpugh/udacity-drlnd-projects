@@ -1,15 +1,21 @@
 import collections
 import typing
 
-from agents import Agent
+from unityagents import UnityEnvironment
+
+from agents import UnityAgent
 
 
-def _train_for_at_most(agent: Agent, env, max_timesteps: int) -> int:
+Score = float
+Scores = typing.List[float]
+
+
+def _train_for_at_most(agent: UnityAgent, env: UnityEnvironment, max_timesteps: int) -> Score:
     """Train agent for a maximum number of timesteps."""
     state = env.reset()
     score = 0
     for t in range(max_timesteps):
-        action = agent.choose_action(state)
+        action = agent(state)
         next_state, reward, done, _ = env.step(action)
         agent.step(state, action, reward, next_state, done)
         state = next_state
@@ -19,14 +25,14 @@ def _train_for_at_most(agent: Agent, env, max_timesteps: int) -> int:
     return score
 
                 
-def _train_until_done(agent: Agent, env, brain_name: str) -> float:
+def _train_until_done(agent: UnityAgent, env: UnityEnvironment, brain_name: str) -> Score:
     """Train the agent until the current episode is complete."""
     env_info = env.reset(train_mode=False)[brain_name]
     state = env_info.vector_observations[0]
     score = 0
     done = False
     while not done:
-        action = agent.choose_action(state)
+        action = agent(state)
         env_info = env.step(action)[brain_name]
         next_state = env_info.vector_observations[0]
         reward = env_info.rewards[0]
@@ -37,13 +43,13 @@ def _train_until_done(agent: Agent, env, brain_name: str) -> float:
     return score
 
 
-def train(agent: Agent,
-          env,
+def train(agent: UnityAgent,
+          env: UnityEnvironment,
           brain_name: str,
           checkpoint_filepath: str,
           target_score: float,
           number_episodes: int,
-          maximum_timesteps=None) -> typing.List[float]:
+          maximum_timesteps=None) -> Scores:
     """
     Reinforcement learning training loop.
     
