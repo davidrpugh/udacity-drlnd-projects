@@ -36,7 +36,7 @@ def evaluate_selected_actions(states: torch.Tensor,
                               rewards: torch.Tensor,
                               dones: torch.Tensor,
                               gamma: float,
-                              q_network: DeepQNetwork) -> torch.Tensor:
+                              q_network: DeepQNetwork) -> QValues:
     """Compute the Q-values by evaluating the actions given the current states and Q-network."""
     next_q_values = q_network(states).gather(dim=1, index=actions)        
     q_values = rewards + (gamma * next_q_values * (1 - dones))
@@ -244,7 +244,7 @@ class DeepQAgent(UnityAgent):
             "q-network-state": self._online_q_network.state_dict(),
             "optimizer-state": self._optimizer.state_dict(),
             "agent-hyperparameters": {
-                "batch_size": self._memory.batch_size,
+                "batch_size": self._batch_size,
                 "gamma": self._gamma,
                 "update_frequency": self._update_frequency
             }

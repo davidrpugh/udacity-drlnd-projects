@@ -14,6 +14,7 @@ def sampling_probabilities(priorities: np.ndarray, alpha: float):
     
 
 def sampling_weights(probabilities: np.ndarray, beta: float, normalize: bool):
+    """Importance sampling weights correct for sampling bias introduced by prioritization."""
     n = probabilities.size
     weights = (n * probabilities)**-beta
     if normalize:
@@ -81,7 +82,7 @@ class PrioritizedExperienceReplayBuffer:
         return self._maximum_size
     
     @property
-    def alpha(self):
+    def initial_beta(self):
         """Initial strength for sampling correction."""
         return self._initial_beta
 

@@ -68,6 +68,7 @@ def train(agent: UnityAgent,
     """
     scores = []
     most_recent_scores = collections.deque(maxlen=100)
+    best_score = 0
     for i in range(number_episodes):
         if maximum_timesteps is None:
             score = _train_until_done(agent, env, brain_name)
@@ -75,12 +76,19 @@ def train(agent: UnityAgent,
             score = _train_for_at_most(agent, env, maximum_timesteps)         
         scores.append(score)
         most_recent_scores.append(score)
+        if score > best_score:
+            agent.save(checkpoint_filepath)
+            
         
         average_score = sum(most_recent_scores) / len(most_recent_scores)
-        if average_score >= target_score:
+        if average_score > target_score:
             print(f"\nEnvironment solved in {i:d} episodes!\tAverage Score: {average_score:.2f}")
             agent.save(checkpoint_filepath)
             break
+        if average_score > best_score:
+            print(f"New top score! {average_score}")
+            agent.save(checkpoint_filepath)
+            best_score = average_score
         if (i + 1) % 100 == 0:
             print(f"\rEpisode {i + 1}\tAverage Score: {average_score:.2f}")
 
