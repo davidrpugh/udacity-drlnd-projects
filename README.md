@@ -3,12 +3,6 @@ Repository of Udacity Deep Reinforcement Learning Nanodegree Program project cod
 
 ## Project details
 
-[Linux](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip) 
-[Linux (headless)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux_NoVis.zip)
-[Mac OSX](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana.app.zip)
-[Windows (64-bit)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Windows_x86_64.zip)
-
-
 ### The "Bananas Collector" environment
 
 ![](./assets/banana-collector.gif)
@@ -35,6 +29,24 @@ collecting a blue banana. The goal of the agent is to collect as many yellow ban
 while avoiding blue bananas.The task is episodic, and in order to solve the environment, the agent 
 must get an average score of +13 over 100 consecutive episodes.
 
+### Downloading the environment
+
+The specific version of the "Bananas Collector" Unity environment used in this project is 
+available at the links below.
+
+* [Linux](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip) 
+* [Linux (headless)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux_NoVis.zip)
+* [Mac OSX](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana.app.zip)
+* [Windows (64-bit)](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Windows_x86_64.zip)
+
+After downloading the appropriate environment file move the file to the `./environments` directory 
+in this repository and the unzip the archive. After unzipping the archive you can then determine 
+the path to the environment for your OS.
+
+* Linux: `./environments/Banana_Linux/Banana.x86_64`
+* Linux: `./environments/Banana_Linux_NoVis/Banana.x86_64`
+* Mac OSX: `./environments/Banana.app`
+
 ## Getting started
 
 ### Building the Conda environment
@@ -48,15 +60,12 @@ export ENV_PREFIX=$PWD/env
 conda env create --prefix $ENV_PREFIX --file environment.yml --force
 ```
 
-Once the new environment has been created you can activate the environment with the following 
+Once the new Conda environment has been created you can activate the environment with the following 
 command.
 
 ```bash
 conda activate $ENV_PREFIX
 ```
-
-Note that the `ENV_PREFIX` directory is *not* under version control as it can always be re-created as 
-necessary.
 
 If you wish to use any JupyterLab extensions included in the `environment.yml` and `requirements.txt` 
 files then you need to activate the environment and rebuild the JupyterLab application using the 
@@ -87,11 +96,22 @@ jupyter lab
 ```
 
 and then open and run the contents of `notebooks/Navigation.ipynb`. Depending on your OS you may 
-need to modify the path to your environment.
+need to modify the path to your environment in the notebook.
 
 Alternatively, one can train the agent by running the following Bash script (better suited for 
 launching on remote servers).
 
 ```bash
-./bin/train.sh --environment $PWD/environments/$ENVIRONMENT_NAME
+./bin/train.sh --environment $ENVIRONMENT_PATH
+```
+
+If you happen to have access to an HPC cluster with GPUs managed using 
+[Slurm](https://slurm.schedmd.com/), then you can use the `./bin/train.sbatch` script to submit a 
+job to your cluster!.
+
+```bash
+sbatch --job-name $JOB_NAME \
+       --mail-user $USER_EMAIL \
+       --mail-type=ALL \
+       ./bin/train.sbatch --environment $ENVIRONMENT_PATH
 ```
