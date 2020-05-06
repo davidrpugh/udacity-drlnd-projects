@@ -11,7 +11,7 @@ Repository of Udacity Deep Reinforcement Learning Nanodegree Program project cod
 
 ### The "Bananas Collector" environment
 
-![]("./assets/bananas-collector.gif")
+![](./assets/bananas-collector.gif)
 
 #### State space
 
@@ -39,8 +39,9 @@ must get an average score of +13 over 100 consecutive episodes.
 
 ### Building the Conda environment
 
-I use [Conda]() to manage the environment for this project. Create the Conda environment in a 
-sub-directory `./env`of the project directory by running the following commands.
+I use [Conda](https://docs.conda.io/en/latest/) to manage the environment for this project. Create 
+the Conda environment in a sub-directory `./env`of the project directory by running the following 
+commands.
 
 ```bash
 export ENV_PREFIX=$PWD/env
