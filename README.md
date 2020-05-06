@@ -11,7 +11,7 @@ Repository of Udacity Deep Reinforcement Learning Nanodegree Program project cod
 
 ### The "Bananas Collector" environment
 
-![](./assets/bananas-collector.gif)
+![](./assets/banana-collector.gif)
 
 #### State space
 
