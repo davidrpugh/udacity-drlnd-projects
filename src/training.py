@@ -86,7 +86,6 @@ def train(agent: UnityAgent,
             agent.save(checkpoint_filepath)
             break
         if average_score > best_score:
-            print(f"New top score! {average_score}")
             agent.save(checkpoint_filepath)
             best_score = average_score
         if (i + 1) % 100 == 0:
