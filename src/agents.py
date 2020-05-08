@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn, optim
 
-from experience_replay_buffer import Experience, PrioritizedExperienceReplayBuffer
+import replay_buffers
 
 
 # custom types for public API
@@ -12,6 +12,8 @@ UnityState = np.ndarray
 Action = int
 Reward = float
 Done = bool
+EpsilonDecaySchedule = typing.Callable[[int], float]
+
 
 # custom types used by private Agent API
 DeepQNetwork = nn.Module
@@ -82,7 +84,7 @@ class UnityAgent:
     def step(self,
              state: UnityState,
              action: Action,
-             reward: float,
+             reward: Reward,
              next_state: UnityState,
              done: bool) -> None:
         """Update agent's state after observing the effect of its action on the environment."""
@@ -94,11 +96,11 @@ class DeepQAgent(UnityAgent):
     def __init__(self,
                  number_actions: int,
                  deep_q_network_fn: DeepQNetworkFn, 
-                 optimizer_fn: typing.Callable[[typing.Iterable[nn.Parameter]], optim.Optimizer],
+                 optimizer_kwargs: dict,
                  preprocessing_fn: typing.Callable[[UnityState], torch.Tensor],
                  batch_size: int,
-                 experience_replay_buffer: PrioritizedExperienceReplayBuffer,
-                 epsilon_decay_schedule: typing.Callable[[int], float],
+                 replay_buffer: replay_buffers.PrioritizedExperienceReplayBuffer,
+                 epsilon_decay_schedule: EpsilonDecaySchedule,
                  gamma: float,
                  update_frequency: int,
                  seed: int = None) -> None:
@@ -107,16 +109,10 @@ class DeepQAgent(UnityAgent):
         
         Parameters:
         -----------
-        state_size (int): the size of the state space.
-        action_size (int): the size of the action space.
-        number_hidden_units (int): number of units in the hidden layers.
-        optimizer_fn (callable): function that takes Q-network parameters and returns an optimizer.
+        number_actions (int): the size of the action space.
+        optimizer_kwargs (dict): dictionar of tuning parameters for the Adam optimizer.
         batch_size (int): number of experience tuples in each mini-batch.
-        buffer_size (int): maximum number of experience tuples stored in the replay buffer.
-        alpha (float): Strength of prioritized sampling; alpha >= 0.0.
-        beta_annealing_schedule (callable): function that takes episode number and returns beta >= 0.
         epsilon_decay_schdule (callable): function that takes episode number and returns 0 <= epsilon < 1.
-        alpha (float): rate at which the target q-network parameters are updated.
         gamma (float): Controls how much that agent discounts future rewards (0 < gamma <= 1).
         update_frequency (int): frequency (measured in time steps) with which q-network parameters are updated.
         seed (int): random seed
@@ -134,7 +130,7 @@ class DeepQAgent(UnityAgent):
                 torch.backends.cudnn.benchmark = False
 
         self._batch_size = batch_size
-        self._memory = experience_replay_buffer
+        self._memory = replay_buffer
         self._epsilon_decay_schedule = epsilon_decay_schedule
         self._gamma = gamma
         
@@ -148,7 +144,7 @@ class DeepQAgent(UnityAgent):
         self._target_q_network.to(self._device)
         
         # initialize the optimizer
-        self._optimizer = optimizer_fn(self._online_q_network.parameters())
+        self._optimizer = optim.Adam(self._online_q_network.parameters(), **optimizer_kwargs)
 
         # initialize some counters
         self._number_episodes = 0
@@ -258,7 +254,7 @@ class DeepQAgent(UnityAgent):
              next_state: UnityState,
              done: Done) -> None:
         """Update internal state after observing effect of action on the environment."""
-        experience = Experience(state, action, reward, next_state, done)
+        experience = replay_buffers.Experience(state, action, reward, next_state, done)
         self._memory.add(experience) 
 
         if done:
@@ -281,15 +277,15 @@ class DeepQAgent(UnityAgent):
                                .to(self._device))
                 actions = (torch.Tensor(_actions)
                                 .long()
-                                .unsqueeze(dim=1)
+                                .view((-1, 1))
                                 .to(self._device))
                 rewards = (torch.Tensor(_rewards)
-                                .unsqueeze(dim=1)
+                                .view((-1, 1))
                                 .to(self._device))
                 next_states = (torch.cat(next_state_tensors, dim=0)
                                     .to(self._device))
                 dones = (torch.Tensor(_dones)
-                               .unsqueeze(dim=1)
+                               .view((-1, 1))
                                .to(self._device))
                 
                 # reshape sampling weights
