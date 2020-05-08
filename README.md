@@ -97,21 +97,3 @@ jupyter lab
 
 and then open and run the contents of `notebooks/Navigation.ipynb`. Depending on your OS you may 
 need to modify the path to your environment in the notebook.
-
-Alternatively, one can train the agent by running the following Bash script (better suited for 
-launching on remote servers).
-
-```bash
-./bin/train.sh --environment $ENVIRONMENT_PATH
-```
-
-If you happen to have access to an HPC cluster with GPUs managed using 
-[Slurm](https://slurm.schedmd.com/), then you can use the `./bin/train.sbatch` script to submit a 
-job to your cluster!.
-
-```bash
-sbatch --job-name $JOB_NAME \
-       --mail-user $USER_EMAIL \
-       --mail-type=ALL \
-       ./bin/train.sbatch --environment $ENVIRONMENT_PATH
-```
