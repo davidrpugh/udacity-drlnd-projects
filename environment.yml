@@ -8,6 +8,7 @@ channels:
 dependencies:
   - gym-box2d=0.17
   - gym-classic_control=0.17
+  - joblib=0.15
   - jupyterlab=1.2
   - nodejs=13
   - pip=20.0
